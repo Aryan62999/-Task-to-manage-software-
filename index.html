@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Task Manager</title>
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <!-- Google Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat&display=swap" rel="stylesheet" />
+  <style>
+    body {
+      font-family: 'Montserrat', sans-serif;
+      background-color: #f8f9fa;
+    }
+    /* Animation for adding a new task */
+    .fade-in {
+      animation: fadeIn 0.5s ease forwards;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    /* Animation for deleting a task */
+    .fade-out {
+      animation: fadeOut 0.3s ease forwards;
+    }
+    @keyframes fadeOut {
+      from { opacity: 1; }
+      to { opacity: 0; }
+    }
+    /* Style for completed task text */
+    .completed {
+      text-decoration: line-through;
+      opacity: 0.6;
+    }
+    /* Sticker image styling */
+    .sticker {
+      width: 50px;
+      height: 50px;
+      margin-right: 10px;
+    }
+    /* Custom button styling: curved corners, decorative spacing, and hover effect */
+    .btn-custom {
+      border-radius: 12px !important;
+      margin: 0 5px !important;
+      transition: transform 0.2s;
+    }
+    .btn-custom:hover {
+      transform: scale(1.05);
+    }
+    /* Additional spacing between buttons in the button group */
+    .btn-group > * {
+      margin: 0 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container my-5">
+    <!-- Header with a decorative sticker -->
+    <div class="d-flex align-items-center mb-4">
+      <img src="https://via.placeholder.com/50" alt="Sticker" class="sticker" />
+      <h1 class="mb-0">Task Manager</h1>
+    </div>
+    <!-- Task Form -->
+    <form id="task-form" class="mb-4">
+      <div class="row g-3 align-items-center">
+        <div class="col-sm-6">
+          <input type="text" id="task-input" class="form-control" placeholder="Enter your task" required />
+        </div>
+        <div class="col-sm-3">
+          <select id="priority-select" class="form-select">
+            <option value="High">High Priority</option>
+            <option value="Medium">Medium Priority</option>
+            <option value="Low">Low Priority</option>
+          </select>
+        </div>
+        <div class="col-sm-3">
+          <button type="submit" class="btn btn-primary w-100 btn-custom">Add Task</button>
+        </div>
+      </div>
+    </form>
+    <!-- Sort Button -->
+    <div class="mb-3">
+      <button id="sort-tasks" class="btn btn-secondary btn-custom">Sort by Priority</button>
+    </div>
+    <!-- Task List -->
+    <ul id="task-list" class="list-group">
+      <!-- Task items will be appended here -->
+    </ul>
+  </div>
+
+  <!-- Bootstrap Bundle with Popper -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Array to hold tasks
+    let tasks = [];
+    const taskForm = document.getElementById('task-form');
+    const taskInput = document.getElementById('task-input');
+    const prioritySelect = document.getElementById('priority-select');
+    const taskList = document.getElementById('task-list');
+    const sortTasksBtn = document.getElementById('sort-tasks');
+
+    // Load tasks from localStorage on page load
+    window.addEventListener('DOMContentLoaded', loadTasks);
+    function loadTasks() {
+      const storedTasks = localStorage.getItem('tasks');
+      if (storedTasks) {
+        tasks = JSON.parse(storedTasks);
+        tasks.forEach(task => {
+          addTaskToDOM(task);
+        });
+      }
+    }
+
+    // Save tasks to localStorage
+    function saveTasks() {
+      localStorage.setItem('tasks', JSON.stringify(tasks));
+    }
+
+    // Handle new task submission
+    taskForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      const taskText = taskInput.value.trim();
+      const priority = prioritySelect.value;
+      if (taskText === '') return;
+      
+      const task = {
+        id: Date.now(),
+        text: taskText,
+        priority: priority,
+        completed: false
+      };
+      tasks.push(task);
+      addTaskToDOM(task);
+      saveTasks();
+      taskForm.reset();
+    });
+
+    // Add a task item to the DOM with text, priority badge, and control buttons
+    function addTaskToDOM(task) {
+      const li = document.createElement('li');
+      li.className = 'list-group-item d-flex justify-content-between align-items-center task-item fade-in';
+      li.setAttribute('data-id', task.id);
+      
+      // Left side: Task text and priority badge
+      const taskInfo = document.createElement('div');
+      taskInfo.className = 'd-flex align-items-center';
+      
+      const textSpan = document.createElement('span');
+      textSpan.className = 'task-text me-2';
+      textSpan.textContent = task.text;
+      if (task.completed) {
+        textSpan.classList.add('completed');
+      }
+      
+      // Priority badge with blue bold background
+      const priorityBadge = document.createElement('span');
+      priorityBadge.className = 'badge bg-primary fw-bold ms-2 priority-badge';
+      priorityBadge.textContent = task.priority;
+      
+      taskInfo.appendChild(textSpan);
+      taskInfo.appendChild(priorityBadge);
+      
+      // Right side: Button group
+      const btnGroup = document.createElement('div');
+      btnGroup.className = 'btn-group';
+      
+      // Edit Button
+      const editBtn = document.createElement('button');
+      editBtn.className = 'btn btn-info btn-sm btn-custom';
+      editBtn.textContent = 'Edit';
+      editBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        editTask(task.id, textSpan);
+      });
+      
+      // Toggle Complete Button (red for not completed, green for completed)
+      const completeBtn = document.createElement('button');
+      completeBtn.className = task.completed ? 'btn btn-success btn-sm btn-custom' : 'btn btn-danger btn-sm btn-custom';
+      completeBtn.textContent = task.completed ? 'Completed' : 'Not Completed';
+      completeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleComplete(task.id, completeBtn, textSpan);
+      });
+      
+      // Change Priority Dropdown
+      const dropdownDiv = document.createElement('div');
+      dropdownDiv.className = 'dropdown d-inline';
+      
+      const priorityBtn = document.createElement('button');
+      priorityBtn.className = 'btn btn-secondary btn-sm dropdown-toggle btn-custom';
+      priorityBtn.type = 'button';
+      priorityBtn.setAttribute('data-bs-toggle', 'dropdown');
+      priorityBtn.textContent = 'Change Priority';
+      dropdownDiv.appendChild(priorityBtn);
+      
+      const dropdownMenu = document.createElement('ul');
+      dropdownMenu.className = 'dropdown-menu';
+      
+      // Dropdown items with color coding for priority options
+      const priorities = [
+        { label: 'High Priority', value: 'High', class: 'text-danger' },
+        { label: 'Medium Priority', value: 'Medium', class: 'text-warning' },
+        { label: 'Low Priority', value: 'Low', class: 'text-success' }
+      ];
+      
+      priorities.forEach(item => {
+        const liItem = document.createElement('li');
+        const aItem = document.createElement('a');
+        aItem.className = 'dropdown-item ' + item.class;
+        aItem.href = '#';
+        aItem.textContent = item.label;
+        aItem.addEventListener('click', (e) => {
+          e.preventDefault();
+          changePriority(task.id, item.value, priorityBadge);
+        });
+        liItem.appendChild(aItem);
+        dropdownMenu.appendChild(liItem);
+      });
+      dropdownDiv.appendChild(dropdownMenu);
+      
+      // Delete Button
+      const deleteBtn = document.createElement('button');
+      deleteBtn.className = 'btn btn-danger btn-sm btn-custom';
+      deleteBtn.textContent = 'Delete';
+      deleteBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        deleteTask(task.id, li);
+      });
+      
+      // Append buttons to button group
+      btnGroup.appendChild(editBtn);
+      btnGroup.appendChild(completeBtn);
+      btnGroup.appendChild(dropdownDiv);
+      btnGroup.appendChild(deleteBtn);
+      
+      // Append left (task info) and right (buttons) to list item
+      li.appendChild(taskInfo);
+      li.appendChild(btnGroup);
+      taskList.appendChild(li);
+    }
+
+    // Toggle task completion status via the dedicated button
+    function toggleComplete(id, completeBtn, textSpan) {
+      tasks = tasks.map(task => {
+        if (task.id === id) {
+          task.completed = !task.completed;
+        }
+        return task;
+      });
+      const updatedTask = tasks.find(t => t.id === id);
+      if (updatedTask.completed) {
+        completeBtn.textContent = 'Completed';
+        completeBtn.className = 'btn btn-success btn-sm btn-custom';
+        textSpan.classList.add('completed');
+      } else {
+        completeBtn.textContent = 'Not Completed';
+        completeBtn.className = 'btn btn-danger btn-sm btn-custom';
+        textSpan.classList.remove('completed');
+      }
+      saveTasks();
+    }
+
+    // Edit a task's text
+    function editTask(id, textSpan) {
+      const newText = prompt('Edit your task:', textSpan.textContent);
+      if (newText !== null && newText.trim() !== '') {
+        tasks = tasks.map(task => {
+          if (task.id === id) {
+            task.text = newText;
+          }
+          return task;
+        });
+        textSpan.textContent = newText;
+        saveTasks();
+      }
+    }
+
+    // Change a task's priority and update the priority badge
+    function changePriority(id, newPriority, priorityBadge) {
+      tasks = tasks.map(task => {
+        if (task.id === id) {
+          task.priority = newPriority;
+        }
+        return task;
+      });
+      priorityBadge.textContent = newPriority;
+      saveTasks();
+    }
+
+    // Delete a task with a fade-out effect
+    function deleteTask(id, liElement) {
+      liElement.classList.add('fade-out');
+      setTimeout(() => {
+        tasks = tasks.filter(task => task.id !== id);
+        liElement.remove();
+        saveTasks();
+      }, 300);
+    }
+
+    // Sort tasks by priority order: High > Medium > Low
+    sortTasksBtn.addEventListener('click', () => {
+      const priorityOrder = { 'High': 1, 'Medium': 2, 'Low': 3 };
+      tasks.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
+      taskList.innerHTML = '';
+      tasks.forEach(task => {
+        addTaskToDOM(task);
+      });
+      saveTasks();
+    });
+  </script>
+</body>
+</html>
